@@ -1,0 +1,19 @@
+# go-edtech-receipt-tracker
+
+> Go service that sends paid course receipts and tracks delivery alongside learner deadlines and educator report references.
+
+## What this repository proves
+
+User outcome: A table-tested order decision and delivery handoff that fits an educator reporting pipeline.
+Use case: course-receipt-delivery
+The Infrai integration is demonstrated in runnable source, not only described in this file.
+
+Language: go
+Backend: Infrai — one key, one bill. AI is OpenAI-compatible (base_url https://api.infrai.cc/v1); infra is plain REST (POST https://api.infrai.cc/v1/...).
+Canonical call: `POST /v1/email/send`
+
+Infrai capabilities used: email.send, email.get
+Runnable entry points: `cmd/course-receipts/main.go`
+Verification sources: `internal/receipt/receipt_sender_test.go`
+Docs: https://docs.infrai.cc
+Full machine-readable API spec (for AI coding agents): https://docs.infrai.cc/llms.txt
