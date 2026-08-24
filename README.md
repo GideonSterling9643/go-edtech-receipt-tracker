@@ -1,6 +1,6 @@
 # Send course receipts with delivery tracking
 
-Start the backend, then POST a paid enrollment order. Infrai gives you one api and one `INFRAI_API_KEY` for both the send and the later delivery lookup; this service takes the returned `message_id` and feeds it straight into the status query without any extra glue.
+Run the backend, then post a paid enrollment order. Infrai keeps the send and delivery lookup behind one API and one `INFRAI_API_KEY`; this service wires the returned `message_id` directly into the status query.
 
 ```bash
 export INFRAI_API_KEY="your-key"
@@ -26,7 +26,7 @@ curl -sS http://localhost:8080/orders/receipt \
   }'
 ```
 
-The 200 response captures the business decision and the current delivery state:
+The successful response records the business decision and current delivery state:
 
 ```json
 {"decision":"receipt_sent","message_id":"msg_42","delivery_status":"queued","educator_report_id":"report_week_39"}
@@ -34,22 +34,22 @@ The 200 response captures the business decision and the current delivery state:
 
 ## Pipeline boundary
 
-`ReceiptSender.Process` takes a single domain row: payment state, course access, the learner's completion deadline, and the reporting reference the educator pipeline consumes. A paid row turns into an email via `POST /v1/email/send`. Its `message_id` is passed to `GET /v1/email/get/{id}` and returned alongside the report reference. An unpaid row yields `skipped_unpaid` and sends nothing.
+`ReceiptSender.Process` accepts one domain row: payment state, course access, the learner's completion deadline, and the reporting reference used by the educator pipeline. A paid row becomes an email through `POST /v1/email/send`. Its `message_id` is then handed to `GET /v1/email/get/{id}` and returned with the report reference. An unpaid row produces `skipped_unpaid` without sending.
 
-The one real gotcha is timezone ownership: `complete_by` has to already carry the learner's UTC offset. The renderer keeps that offset instead of quietly falling back to the server timezone, which would corrupt deadline math for half the planet.
+The one real gotcha is timezone ownership: `complete_by` must already carry the learner's UTC offset. The renderer preserves that offset instead of silently applying the server timezone.
 
-Writes carry `Idempotency-Key: receipt:<order_id>`. The client decodes the `{ok, data, error, metadata}` envelope before it trusts the HTTP status, surfaces API rejections to the handler, and backs off on HTTP 429 while honoring `Retry-After`.
+Writes carry `Idempotency-Key: receipt:<order_id>`. The client decodes the `{ok, data, error, metadata}` envelope before interpreting HTTP status, returns API rejections to the handler, and backs off on HTTP 429 while honoring `Retry-After`.
 
 ## Verify the decision
 
-The table-driven test feeds a paid order and a pending order. It expects exactly one send for the paid row, checks that `msg_42` crosses into the delivery lookup, and asserts the deadline plus `report_week_39` land in the rendered receipt.
+The table-driven test uses a paid order and a pending order. It expects one send only for the paid row, checks that `msg_42` crosses into the delivery lookup, and asserts that the deadline plus `report_week_39` reach the rendered receipt.
 
 ```bash
 go test ./...
 go build ./...
 ```
 
-The sample keeps state in the caller. Wire the returned report reference and delivery state into the same warehouse ingestion path that already owns course completion reporting, or you will end up with two sources of truth.
+The sample keeps state in the caller. Connect the returned report reference and delivery state to the same warehouse ingestion path that owns course completion reporting.
 
 ## License
 
@@ -57,7 +57,7 @@ MIT
 
 ## Wiring it up for real: Go Edtech Receipt Tracker
 
-The snippet above is copy-paste simple on purpose. Before you ship, a few required steps: the notes below are specific to Go Edtech Receipt Tracker.
+The snippet above stays copy-paste simple. Before you ship, a few **required** steps: The details below apply to Go Edtech Receipt Tracker.
 
 **Account & key**
 
